@@ -1,0 +1,6 @@
+[package]
+name = "intermezzOS"
+version = "0.1.0"
+authors = ["Matthew Foreman <soniceroy@gmail.com>"]
+
+[dependencies]
