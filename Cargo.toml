@@ -3,4 +3,11 @@ name = "intermezzos"
 version = "0.1.0"
 authors = ["Matthew Foreman <soniceroy@gmail.com>"]
 
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+panic = "abort" # disable stack unwinding for the kernel
+
 [dependencies]
+
