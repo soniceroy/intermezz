@@ -1,3 +1,4 @@
+extern kmain
 global start  ; global makes 'start' public
 
 section .text ; ".text" section is where code goes
@@ -68,7 +69,7 @@ start:
     ;   and bar tells the address to jump to
     ; jump is needed to update cs because cs cannot be
     ;   directly written to.
-    jmp gdt64.code:long_mode_start
+    jmp gdt64.code:kmain
 
 ; block started by symbol section
 ;  entries in this section are automatically set
@@ -119,9 +120,9 @@ gdt64:
     dw .pointer - gdt64 - 1 ; calculate the length for GDT
     dq gdt64 ; address of our GDT
 
-section .text
-bits 64
-long_mode_start:
-    mov rax, 0x2f592f412f4b2f4f
-    mov qword [0xb8000], rax
-    hlt
+;section .text
+;bits 64
+;long_mode_start:
+;    mov rax, 0x2f592f412f4b2f4f
+;    mov qword [0xb8000], rax
+;    hlt

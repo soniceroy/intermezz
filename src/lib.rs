@@ -10,7 +10,17 @@ extern fn eg_personality() {
 }
 
 #[panic_implementation]
-extern fn panic(_info: &PanicInfo) -> ! {
+#[no_mangle]
+pub extern fn panic(_info: &PanicInfo) -> ! {
 	loop {}
 }
 
+#[no_mangle]
+pub extern fn kmain() -> ! {
+	unsafe {
+		let vga = 0xb8000 as *mut u64;
+
+		*vga = 0x2f592f412f4b2f4f;
+	}
+	loop {}
+}
