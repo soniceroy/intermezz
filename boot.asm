@@ -54,22 +54,21 @@ start:
     or eax, 1 << 16
     mov cr0, eax
 
-    ; mov command: format - "mov {size} {place}, {thing}
-    ; "[" and "]" around a number indicate a specific
-    ;     memory location (here [0xb8000] is the VGA text buffer)
-    mov word [0xb8000], 0x0248 ; H
-    mov word [0xb8002], 0x0265 ; e
-    mov word [0xb8004], 0x026C ; l
-    mov word [0xb8006], 0x026C ; l
-    mov word [0xb8008], 0x026F ; o
-    mov word [0xb800a], 0x0220 ; space
-    mov word [0xb800c], 0x0257 ; W
-    mov word [0xb800e], 0x026F ; o
-    mov word [0xb8010], 0x0272 ; r
-    mov word [0xb8012], 0x026C ; l
-    mov word [0xb8014], 0x0264 ; d
-    mov word [0xb8016], 0x0221 ; !
-    hlt
+    ; load the GDT
+    lgdt [gdt64.pointer]
+
+    ; update the 16 bit segment registers
+    mov ax, gdt64.data ; sixteen bit register version of eax
+    mov ss, ax ; stack segment register **N/A but needs to be set
+    mov ds, ax ; data segment register
+    mov es, ax ; extra segment register **N/A but needs to be set
+
+    ; jump to long mode
+    ; foo:bar where foo updates cs (code segment) register
+    ;   and bar tells the address to jump to
+    ; jump is needed to update cs because cs cannot be
+    ;   directly written to.
+    jmp gdt64.code:long_mode_start
 
 ; block started by symbol section
 ;  entries in this section are automatically set
@@ -86,3 +85,43 @@ p3_table:
     resb 4096
 p2_table:
     resb 4096
+
+
+
+; set up GDT
+section .rodata ; read only data
+gdt64:
+    dq 0 ; define quad-word (64 bit value)
+; "." here scopes code under gdt64 (gdt64.code)
+.code: equ $ - gdt64 ; set current address for the label
+                     ; (equ) to current address minus
+                     ; the address for gdt64 
+                     ; calculates the offset for this 
+                     ; scoped code.
+    ; bit meaning for code segment
+    ;   44 = 'descriptor type' 1 for code and data segments
+    ;   47 = 'present'
+    ;   41 = 'read/write' 1 for readable
+    ;   43 = 'executable'
+    ;   53 = '64-bit'
+    dq (1<<44) | (1<<47) | (1<<41) | (1<<43) | (1<<53)
+
+.data: equ $ - gdt64
+    ; bit meaning for data segment
+    ;   44 = 'descriptor type' 1 for code and data segments
+    ;   47 = 'present'
+    ;   41 = for data segments, this means it is writable
+    ;           which is the opposite than code segments
+    dq (1<<44) | (1<<47) | (1<<41)
+
+; Structure used to tell the hardware about our GDT
+.pointer:
+    dw .pointer - gdt64 - 1 ; calculate the length for GDT
+    dq gdt64 ; address of our GDT
+
+section .text
+bits 64
+long_mode_start:
+    mov rax, 0x2f592f412f4b2f4f
+    mov qword [0xb8000], rax
+    hlt
