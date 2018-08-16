@@ -5,7 +5,7 @@
 use core:: panic::PanicInfo;
 
 #[lang = "eh_personality"]
-extern fn eg_personality() {
+extern fn eh_personality() {
 
 }
 

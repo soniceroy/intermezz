@@ -4,6 +4,12 @@ global start  ; global makes 'start' public
 section .text ; ".text" section is where code goes
 bits 32       ; 32-bit protected mode
 start:
+    ; update the stack pointer register
+    mov esp, stack_top
+
+    
+    call check_long_mode
+
     ; Point the first entry of the level 4 page table to
     ;     the first entry in the p3 table
     mov eax, p3_table
@@ -71,6 +77,33 @@ start:
     ;   directly written to.
     jmp gdt64.code:kmain
 
+; Prints "ERR: {error_code}" and hangs
+; parameter: error code (in ascii) in al
+error:
+    mov dword [0xb8000], 0x4f524f45
+    mov dword [0xb8004], 0x4f3a4f52
+    mov dword [0xb8008], 0x4f204f20
+    mov byte  [0xb800a], al
+    hlt
+
+check_long_mode:
+    ; test if extended processor info in available
+    mov eax, 0x80000000    ; implicit argument for cpuid
+    cpuid                  ; get highest supported argument
+    cmp eax, 0x80000001    ; it needs to be at least 0x80000001
+    jb .no_long_mode       ; if it's less, the CPU is too old for long mode
+
+    ; use extended info to test if long mode is available
+    mov eax, 0x80000001    ; argument for extended processor info
+    cpuid                  ; returns various feature bits in ecx and edx
+    test edx, 1 << 29      ; test if the LM-bit is set in the D-register
+    jz .no_long_mode       ; If it's not set, there is no long mode
+    ret
+.no_long_mode:
+    mov al, "2"
+    jmp error
+
+
 ; block started by symbol section
 ;  entries in this section are automatically set
 ;  to zero by the linker
@@ -87,7 +120,9 @@ p3_table:
 p2_table:
     resb 4096
 
-
+stack_bottom:
+    resb 64
+stack_top:
 
 ; set up GDT
 section .rodata ; read only data
@@ -119,10 +154,3 @@ gdt64:
 .pointer:
     dw .pointer - gdt64 - 1 ; calculate the length for GDT
     dq gdt64 ; address of our GDT
-
-;section .text
-;bits 64
-;long_mode_start:
-;    mov rax, 0x2f592f412f4b2f4f
-;    mov qword [0xb8000], rax
-;    hlt
